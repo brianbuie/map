@@ -1,6 +1,10 @@
 import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
+import { Cron } from 'croner';
+import { fetchAndSaveAircraft } from './fetchers/aircraft';
+import { layerRoutes } from './routes/layers';
+import { pruneOldSnapshots } from './db';
 
 const app = new Hono();
 
@@ -14,6 +18,22 @@ app.get('/api/config', c => {
   if (!token) return c.json({ error: 'MAPBOX_PUBLIC_TOKEN not configured' }, 500);
   return c.json({ mapboxToken: token });
 });
+
+app.route('/api/layers', layerRoutes);
+
+// --- Background jobs ---
+// Poll OpenSky every 25s and broadcast to SSE clients
+new Cron('*/25 * * * * *', async () => {
+  try {
+    await fetchAndSaveAircraft();
+    new BroadcastChannel('layer:aircraft').postMessage('refresh');
+  } catch (err) {
+    console.error('[aircraft cron]', err);
+  }
+});
+
+// Prune old snapshots daily at midnight
+new Cron('0 0 * * *', pruneOldSnapshots);
 
 // --- Static files (Vite build output) ---
 app.use('/assets/*', serveStatic({ root: './.app' }));
