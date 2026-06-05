@@ -5,6 +5,7 @@ WORKDIR /workspace
 COPY . .
 
 RUN bun install --frozen-lockfile
+RUN bun run build
 
 USER bun
 
