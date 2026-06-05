@@ -1,11 +1,21 @@
 @import 'tailwindcss';
 
 @layer base {
-  :root {
-    @apply text-[rgba(255,255,255,0.87)] bg-[#242424] font-sans;
+  * {
+    box-sizing: border-box;
   }
 
-  body {
-    @apply grid place-items-center min-w-[320px] min-h-screen relative m-0;
+  html,
+  body,
+  #root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .error {
+    @apply flex items-center justify-center h-screen text-red-400 bg-[#242424];
   }
 }

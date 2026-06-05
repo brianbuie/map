@@ -7,9 +7,13 @@ const app = new Hono();
 app.use(logger());
 
 // --- API routes ---
-app.get('/api/hello', c => c.json({ message: 'Hello, world!', method: 'GET' }));
-app.put('/api/hello', c => c.json({ message: 'Hello, world!', method: 'PUT' }));
-app.get('/api/hello/:name', c => c.json({ message: `Hello, ${c.req.param('name')}!` }));
+// Returns the public (pk.) Mapbox token for browser map rendering.
+// The secret (sk.) token stays server-side for scheduled data fetching.
+app.get('/api/config', c => {
+  const token = process.env.MAPBOX_PUBLIC_TOKEN;
+  if (!token) return c.json({ error: 'MAPBOX_PUBLIC_TOKEN not configured' }, 500);
+  return c.json({ mapboxToken: token });
+});
 
 // --- Static files (Vite build output) ---
 app.use('/assets/*', serveStatic({ root: './.app' }));
