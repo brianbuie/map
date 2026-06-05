@@ -25,7 +25,7 @@ export function App() {
       mapboxAccessToken={mapboxToken}
       initialViewState={{ longitude: -94.708316, latitude: 38.94176, zoom: 10 }}
       style={{ width: '100vw', height: '100vh' }}
-      mapStyle="mapbox://styles/brianbuie1/cmq0adcg3009m01rz9z615aq3"
+      mapStyle="mapbox://styles/brianbuie1/cmq1cmdlw001y01qu5s5o5nn3"
     />
   );
 }
