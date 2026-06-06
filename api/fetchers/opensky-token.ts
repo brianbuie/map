@@ -1,5 +1,4 @@
-const TOKEN_URL =
-  'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token';
+const TOKEN_URL = 'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token';
 
 let cachedToken: string | null = null;
 let expiresAt = 0;
@@ -7,17 +6,17 @@ let expiresAt = 0;
 export async function getOpenSkyToken(): Promise<string> {
   if (cachedToken && Date.now() < expiresAt - 60_000) return cachedToken;
 
-  const clientId = process.env.OPENSKY_CLIENT;
-  const clientSecret = process.env.OPENSKY_SECRET;
-  if (!clientId || !clientSecret) throw new Error('OPENSKY_CLIENT / OPENSKY_SECRET not set');
+  const client_id = process.env.OPENSKY_CLIENT;
+  const client_secret = process.env.OPENSKY_SECRET;
+  if (!client_id || !client_secret) throw new Error('OPENSKY_CLIENT / OPENSKY_SECRET not set');
 
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'client_credentials',
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id,
+      client_secret,
     }),
   });
 

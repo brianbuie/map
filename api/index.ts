@@ -3,6 +3,7 @@ import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
 import { Cron } from 'croner';
 import { fetchAndSaveAircraft } from './fetchers/aircraft';
+import { mapboxClientConfig } from './fetchers/mapbox';
 import { layerRoutes } from './routes/layers';
 import { pruneOldSnapshots } from './db';
 
@@ -14,9 +15,11 @@ app.use(logger());
 // Returns the public (pk.) Mapbox token for browser map rendering.
 // The secret (sk.) token stays server-side for scheduled data fetching.
 app.get('/api/config', c => {
-  const token = process.env.MAPBOX_PUBLIC_TOKEN;
-  if (!token) return c.json({ error: 'MAPBOX_PUBLIC_TOKEN not configured' }, 500);
-  return c.json({ mapboxToken: token });
+  const config = mapboxClientConfig();
+  if (!config.MAPBOX_PUBLIC_TOKEN) {
+    return c.json({ error: 'MAPBOX_PUBLIC_TOKEN not configured' }, 500);
+  }
+  return c.json(config);
 });
 
 app.route('/api/layers', layerRoutes);

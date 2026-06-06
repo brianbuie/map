@@ -1,8 +1,16 @@
 import { saveSnapshot } from '../db';
 import { getOpenSkyToken } from './opensky-token';
 
-// 5°×5° box centered on Kansas City (~39.1°N, 94.6°W)
-const BBOX = { lamin: 36.6, lomin: -97.1, lamax: 41.6, lomax: -92.1 };
+const LAT = Number(process.env.MAP_LAT);
+const LONG = Number(process.env.MAP_LONG);
+
+// 5°×5° box
+const BBOX = {
+  lamin: LAT - 2.5,
+  lamax: LAT + 2.5,
+  lomin: LONG - 2.5,
+  lomax: LONG + 2.5,
+};
 
 // OpenSky state vector field indices
 const IDX = { icao24: 0, callsign: 1, lon: 5, lat: 6, altitude: 7, heading: 10, squawk: 14 };

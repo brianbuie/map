@@ -1,14 +1,11 @@
 import { Database } from 'bun:sqlite';
 import path from 'path';
 
-const DB_PATH = process.env.DB_PATH ?? path.join(import.meta.dir, '..', 'data', 'map.db');
-
-// Ensure data directory exists
-await Bun.write(path.join(path.dirname(DB_PATH), '.gitkeep'), '').catch(() => {});
+const DB_PATH = path.join(import.meta.dir, '..', 'data', 'map.db');
 
 export const db = new Database(DB_PATH, { create: true });
 
-db.exec(`
+db.run(`
   CREATE TABLE IF NOT EXISTS snapshots (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     layer     TEXT    NOT NULL,
