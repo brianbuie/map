@@ -25,15 +25,28 @@ app.get('/api/config', c => {
 app.route('/api/layers', layerRoutes);
 
 // --- Background jobs ---
-// Poll OpenSky every 25s and broadcast to SSE clients
-new Cron('*/25 * * * * *', async () => {
+const aircraftPollSeconds = Math.max(10, Number(process.env.AIRCRAFT_POLL_SECONDS ?? 25));
+let isAircraftPollInFlight = false;
+
+const pollAircraft = async () => {
+  if (isAircraftPollInFlight) return;
+  isAircraftPollInFlight = true;
+
   try {
     await fetchAndSaveAircraft();
     new BroadcastChannel('layer:aircraft').postMessage('refresh');
   } catch (err) {
-    console.error('[aircraft cron]', err);
+    console.error('[aircraft poll]', err);
+  } finally {
+    isAircraftPollInFlight = false;
   }
-});
+};
+
+// Poll OpenSky on a true fixed interval and broadcast SSE updates.
+void pollAircraft();
+setInterval(() => {
+  void pollAircraft();
+}, aircraftPollSeconds * 1000);
 
 // Prune old snapshots daily at midnight
 new Cron('0 0 * * *', pruneOldSnapshots);
@@ -44,6 +57,8 @@ app.use('/favicon.ico', serveStatic({ root: './.app' }));
 app.get('/*', serveStatic({ path: './.app/index.html' }));
 
 const port = Number(process.env.PORT ?? 3000);
+const idleTimeout = Number(process.env.IDLE_TIMEOUT_SECONDS ?? 60);
 console.log(`Server running at http://localhost:${port}`);
+console.log(`Aircraft poll interval: ${aircraftPollSeconds}s`);
 
-export default { port, fetch: app.fetch };
+export default { port, idleTimeout, fetch: app.fetch };
