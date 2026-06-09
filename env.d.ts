@@ -11,12 +11,6 @@ declare module 'bun' {
     MAPBOX_TOKEN: string;
     MAPBOX_PUBLIC_TOKEN: string;
 
-    // Aircraft
-    AIRCRAFT_BBOX_RADIUS_DEGREES: string;
-    AIRCRAFT_POLL_SECONDS: string;
-    OPENSKY_CLIENT: string;
-    OPENSKY_SECRET: string;
-
     // Aircraft v2
     ADSB_URL: string;
   }

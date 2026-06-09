@@ -6,14 +6,14 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import './index.css';
 
 type AircraftProperties = {
-  icao24: string;
-  callsign: string;
-  time_position: number | null;
-  altitude: number | null;
-  velocity: number | null;
-  heading: number | null;
+  hex: string;
+  flight: string;
+  alt_baro: number | 'ground' | null;
+  gs: number | null;
+  track: number | null;
   squawk: string | null;
   category: string | null;
+  seen_pos: number | null;
 };
 
 type AircraftCollection = GeoJSON.FeatureCollection<GeoJSON.Point, AircraftProperties>;
@@ -33,7 +33,7 @@ const aircraftArrowLayer: LayerProps = {
     'text-size': ['interpolate', ['linear'], ['zoom'], 5, 12, 10, 16],
     'text-allow-overlap': true,
     'text-ignore-placement': true,
-    'text-rotate': ['coalesce', ['get', 'heading'], 0],
+    'text-rotate': ['coalesce', ['get', 'track'], 0],
   },
   paint: {
     'text-color': '#ffd56b',
@@ -51,7 +51,7 @@ const aircraftAltitudeLayer: LayerProps = {
     'circle-color': [
       'interpolate',
       ['linear'],
-      ['coalesce', ['get', 'altitude'], 0],
+      ['coalesce', ['get', 'alt_baro'], 0],
       0,
       '#41d3bd',
       5000,
@@ -123,7 +123,7 @@ export function App() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch('/api/layers/aircraft/latest', { signal: controller.signal })
+    fetch('/api/layers/adsb/latest', { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error('Aircraft layer unavailable');
         return res.json();
@@ -136,7 +136,7 @@ export function App() {
         // Ignore initial availability failures; live stream will populate once data exists.
       });
 
-    const stream = new EventSource('/api/layers/aircraft/stream');
+    const stream = new EventSource('/api/layers/adsb/stream');
     stream.onmessage = event => {
       try {
         const data = JSON.parse(event.data) as unknown;

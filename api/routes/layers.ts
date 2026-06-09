@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { getLatest, getRange } from '../db';
-import { fetchAndSaveAircraft } from '../fetchers/aircraft';
+import { fetchAndSaveAdsb } from '../fetchers/adsb';
 
 const layers = new Hono();
 
@@ -45,9 +45,9 @@ layers.get('/:layer/stream', c => {
 // Trigger a manual refresh (useful for testing)
 layers.post('/:layer/refresh', async c => {
   const { layer } = c.req.param();
-  if (layer === 'aircraft') {
-    const geojson = await fetchAndSaveAircraft();
-    new BroadcastChannel(`layer:aircraft`).postMessage('refresh');
+  if (layer === 'adsb') {
+    const geojson = await fetchAndSaveAdsb();
+    new BroadcastChannel(`layer:adsb`).postMessage('refresh');
     return c.json({ ok: true, features: (geojson as any).features.length });
   }
   return c.json({ error: 'Unknown layer' }, 404);

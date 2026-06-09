@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
 import { Cron } from 'croner';
-import { fetchAndSaveAircraft } from './fetchers/aircraft';
+import { fetchAndSaveAdsb } from './fetchers/adsb';
 import { mapboxClientConfig } from './fetchers/mapbox';
 import { layerRoutes } from './routes/layers';
 import { pruneOldSnapshots } from './db';
@@ -25,28 +25,19 @@ app.get('/api/config', c => {
 app.route('/api/layers', layerRoutes);
 
 // --- Background jobs ---
-const aircraftPollSeconds = Math.max(10, Number(process.env.AIRCRAFT_POLL_SECONDS ?? 25));
-let isAircraftPollInFlight = false;
 
-const pollAircraft = async () => {
-  if (isAircraftPollInFlight) return;
-  isAircraftPollInFlight = true;
-
+const pollAdsb = async () => {
   try {
-    await fetchAndSaveAircraft();
-    new BroadcastChannel('layer:aircraft').postMessage('refresh');
+    await fetchAndSaveAdsb();
+    new BroadcastChannel('layer:adsb').postMessage('refresh');
   } catch (err) {
-    console.error('[aircraft poll]', err);
+    console.error('[adsb poll]', err);
   } finally {
-    isAircraftPollInFlight = false;
+    setTimeout(() => void pollAdsb(), 1000);
   }
 };
 
-// Poll OpenSky on a true fixed interval and broadcast SSE updates.
-void pollAircraft();
-setInterval(() => {
-  void pollAircraft();
-}, aircraftPollSeconds * 1000);
+void pollAdsb();
 
 // Prune old snapshots daily at midnight
 new Cron('0 0 * * *', pruneOldSnapshots);
@@ -59,6 +50,5 @@ app.get('/*', serveStatic({ path: './.app/index.html' }));
 const port = Number(process.env.PORT ?? 3000);
 const idleTimeout = Number(process.env.IDLE_TIMEOUT_SECONDS ?? 60);
 console.log(`Server running at http://localhost:${port}`);
-console.log(`Aircraft poll interval: ${aircraftPollSeconds}s`);
 
 export default { port, idleTimeout, fetch: app.fetch };
