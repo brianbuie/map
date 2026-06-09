@@ -16,5 +16,8 @@ declare module 'bun' {
     AIRCRAFT_POLL_SECONDS: string;
     OPENSKY_CLIENT: string;
     OPENSKY_SECRET: string;
+
+    // Aircraft v2
+    ADSB_URL: string;
   }
 }
