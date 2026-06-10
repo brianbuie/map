@@ -1,11 +1,11 @@
 /**
  * This returns all "known" aircraft from the local ADSB receiver
- * An aircraft can be included in this list for a few minutes since the last message or last received position
- * `seen_pos` is important here. If an aircraft doesn't have it, ignore it
+ * An aircraft can be included in this list for up to 60 seconds after the last message received
+ * `seen_pos` is the last valid position message received from this aircraft
  * If `seen_pos` is older than 30 seconds, still return it for the map, but do not save to the Db
  */
 
-async function getAdsb(): Promise<{
+export async function getAdsb(): Promise<{
   now: number; // unix timestamp
   messages: number;
   aircraft: {
@@ -84,6 +84,8 @@ async function getAdsb(): Promise<{
     ws?: number; // wind speed calculated from ground track, true heading, true airspeed, and ground speed
     oat?: number; // outer/static air temperature, C, calculated from mach number and true airspeed
     tat?: number; // total air temperature, C, calculated from mach number and true airspeed
+    r?: string; // aircraft registration pulled from database
+    t?: string; // aircraft type pulled from database
   }[];
 }> {
   return fetch(process.env.ADSB_URL).then(r => {
@@ -96,19 +98,19 @@ import { saveSnapshot } from '../db';
 
 type AdsbAircraft = Awaited<ReturnType<typeof getAdsb>>['aircraft'][number];
 
-export type AdsbFeature = GeoJSON.Feature<
-  GeoJSON.Point,
-  {
-    hex: string;
-    flight: string;
-    alt_baro: number | 'ground' | null;
-    gs: number | null;
-    track: number | null;
-    squawk: string | null;
-    category: string | null;
-    seen_pos: number | null;
-  }
->;
+export type AdsbProperties = {
+  hex: string;
+  flight: string;
+  alt_baro: number | 'ground' | null;
+  gs: number | null;
+  track: number | null;
+  squawk: string | null;
+  category: string | null;
+  t: string | null;
+  seen_pos: number | null;
+};
+
+export type AdsbFeature = GeoJSON.Feature<GeoJSON.Point, AdsbProperties>;
 
 function toGeoJSON(aircraft: AdsbAircraft[]): GeoJSON.FeatureCollection {
   const features: AdsbFeature[] = [];
@@ -125,6 +127,7 @@ function toGeoJSON(aircraft: AdsbAircraft[]): GeoJSON.FeatureCollection {
         track: a.track ?? null,
         squawk: a.squawk ?? null,
         category: a.category ?? null,
+        t: a.t ?? null,
         seen_pos: a.seen_pos,
       },
     });

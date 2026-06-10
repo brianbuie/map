@@ -2,26 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { GeoJSONSource } from 'mapbox-gl';
 import Map, { Layer, type LayerProps, type MapRef, Source } from 'react-map-gl/mapbox';
 import { type MapboxConfig } from '../api/fetchers/mapbox';
+import { type AdsbProperties } from '../api/fetchers/adsb';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './index.css';
 
-type AircraftProperties = {
-  hex: string;
-  flight: string;
-  alt_baro: number | 'ground' | null;
-  gs: number | null;
-  track: number | null;
-  squawk: string | null;
-  category: string | null;
-  seen_pos: number | null;
-};
-
-type AircraftCollection = GeoJSON.FeatureCollection<GeoJSON.Point, AircraftProperties>;
-
-const EMPTY_AIRCRAFT: AircraftCollection = {
-  type: 'FeatureCollection',
-  features: [],
-};
+type AircraftCollection = GeoJSON.FeatureCollection<GeoJSON.Point, AdsbProperties>;
 
 const aircraftArrowLayer: LayerProps = {
   id: 'aircraft-arrows',
@@ -42,70 +27,36 @@ const aircraftArrowLayer: LayerProps = {
   },
 };
 
-const aircraftAltitudeLayer: LayerProps = {
-  id: 'aircraft-altitude',
-  type: 'circle',
-  source: 'aircraft',
-  paint: {
-    'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 1.5, 9, 4],
-    'circle-color': [
-      'interpolate',
-      ['linear'],
-      ['coalesce', ['get', 'alt_baro'], 0],
-      0,
-      '#41d3bd',
-      5000,
-      '#72efdd',
-      12000,
-      '#ffd166',
-      18000,
-      '#ff8a5b',
-      25000,
-      '#ef476f',
-    ],
-    'circle-opacity': 0.6,
-  },
-};
-
 function toAircraftCollection(input: unknown): AircraftCollection | null {
   if (!input || typeof input !== 'object') return null;
-
   const maybeFeatureCollection = input as {
     type?: unknown;
     features?: unknown;
   };
-
   if (maybeFeatureCollection.type !== 'FeatureCollection' || !Array.isArray(maybeFeatureCollection.features)) {
     return null;
   }
-
   return maybeFeatureCollection as AircraftCollection;
-}
-
-function useAircraftSourceSync(mapRef: React.RefObject<MapRef | null>, aircraft: AircraftCollection): void {
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const source = map.getSource('aircraft') as GeoJSONSource | undefined;
-    source?.setData(aircraft);
-  }, [mapRef, aircraft]);
 }
 
 export function App() {
   const mapRef = useRef<MapRef | null>(null);
   const [config, setConfig] = useState<MapboxConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [aircraft, setAircraft] = useState<AircraftCollection>(EMPTY_AIRCRAFT);
+  const [aircraft, setAircraft] = useState<AircraftCollection>({
+    type: 'FeatureCollection',
+    features: [],
+  });
 
-  useAircraftSourceSync(mapRef, aircraft);
-
-  const syncAircraftNow = () => {
+  const syncAircraft = () => {
     const map = mapRef.current;
     if (!map) return;
     const source = map.getSource('aircraft') as GeoJSONSource | undefined;
     source?.setData(aircraft);
   };
+  useEffect(() => {
+    syncAircraft();
+  }, [mapRef, aircraft]);
 
   useEffect(() => {
     fetch('/api/config')
@@ -132,9 +83,7 @@ export function App() {
         const parsed = toAircraftCollection(data);
         if (parsed) setAircraft(parsed);
       })
-      .catch(() => {
-        // Ignore initial availability failures; live stream will populate once data exists.
-      });
+      .catch(() => {});
 
     const stream = new EventSource('/api/layers/adsb/stream');
     stream.onmessage = event => {
@@ -167,10 +116,9 @@ export function App() {
       }}
       style={{ width: '100vw', height: '100vh' }}
       mapStyle={config.MAP_STYLE}
-      onLoad={syncAircraftNow}
+      onLoad={syncAircraft}
     >
       <Source id="aircraft" type="geojson" data={aircraft}>
-        <Layer {...aircraftAltitudeLayer} />
         <Layer {...aircraftArrowLayer} />
       </Source>
     </Map>
