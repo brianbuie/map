@@ -2,11 +2,24 @@ import { useEffect, useRef, useState } from 'react';
 import type { GeoJSONSource } from 'mapbox-gl';
 import Map, { Layer, type LayerProps, type MapRef, Source } from 'react-map-gl/mapbox';
 import { type MapboxConfig } from '../api/fetchers/mapbox';
-import { type AdsbProperties } from '../api/fetchers/adsb';
+// import { type AdsbProperties } from '../api/fetchers/adsb';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './index.css';
 
-type AircraftCollection = GeoJSON.FeatureCollection<GeoJSON.Point, AdsbProperties>;
+type AircraftCollection = GeoJSON.FeatureCollection<
+  GeoJSON.Point,
+  {
+    hex: string;
+    flight: string;
+    alt_baro: number | 'ground' | null;
+    gs: number | null;
+    track: number | null;
+    squawk: string | null;
+    category: string | null;
+    t: string | null;
+    seen_pos: number | null;
+  }
+>;
 
 const aircraftArrowLayer: LayerProps = {
   id: 'aircraft-arrows',
@@ -47,6 +60,15 @@ export function App() {
     type: 'FeatureCollection',
     features: [],
   });
+  // Rounds to a 5-minute window; changing this value forces Mapbox to refetch radar tiles.
+  const [radarEpoch, setRadarEpoch] = useState(() => Math.floor(Date.now() / (5 * 60 * 1000)));
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setRadarEpoch(Math.floor(Date.now() / (5 * 60 * 1000)));
+    }, 60 * 1000); // check every minute, update only when the 5-min window turns
+    return () => clearInterval(id);
+  }, []);
 
   const syncAircraft = () => {
     const map = mapRef.current;
@@ -118,6 +140,15 @@ export function App() {
       mapStyle={config.MAP_STYLE}
       onLoad={syncAircraft}
     >
+      <Source
+        id="radar"
+        type="raster"
+        tiles={[`/api/layers/radar/wms?bbox={bbox-epsg-3857}&width=256&height=256&t=${radarEpoch}`]}
+        tileSize={256}
+        attribution="NOAA/NWS"
+      >
+        <Layer id="radar-layer" type="raster" paint={{ 'raster-opacity': 0.6 }} />
+      </Source>
       <Source id="aircraft" type="geojson" data={aircraft}>
         <Layer {...aircraftArrowLayer} />
       </Source>

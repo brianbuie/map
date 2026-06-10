@@ -1,4 +1,5 @@
 /**
+ * https://github.com/wiedehopf/readsb/blob/dev/README-json.md
  * This returns all "known" aircraft from the local ADSB receiver
  * An aircraft can be included in this list for up to 60 seconds after the last message received
  * `seen_pos` is the last valid position message received from this aircraft

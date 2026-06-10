@@ -9,7 +9,7 @@ import { pruneOldSnapshots } from './db';
 
 const app = new Hono();
 
-app.use(logger());
+// app.use(logger());
 
 // --- API routes ---
 // Returns the public (pk.) Mapbox token for browser map rendering.

@@ -2,8 +2,24 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { getLatest, getRange } from '../db';
 import { fetchAndSaveAdsb } from '../fetchers/adsb';
+import { fetchRadarWmsTile } from '../fetchers/radar';
 
 const layers = new Hono();
+
+// Radar: proxy NOAA WMS tiles with 5-minute server-side caching.
+// Mapbox raster source uses {bbox-epsg-3857} which becomes the ?bbox= param.
+layers.get('/radar/wms', async c => {
+  const bbox = c.req.query('bbox') ?? '';
+  const width = Math.min(Math.max(Number(c.req.query('width') ?? 256), 1), 2048);
+  const height = Math.min(Math.max(Number(c.req.query('height') ?? 256), 1), 2048);
+
+  const result = await fetchRadarWmsTile(bbox, width, height);
+  if (!result) return c.body(null, 503);
+
+  c.header('Content-Type', result.contentType);
+  c.header('Cache-Control', 'public, max-age=300');
+  return c.body(result.data.buffer as ArrayBuffer);
+});
 
 // Latest snapshot as GeoJSON
 layers.get('/:layer/latest', async c => {
