@@ -1,68 +1,36 @@
 import * as React from 'react';
-import Map, { type MapRef, Source, Layer } from 'react-map-gl/mapbox';
-import { type ConfigSpecification } from 'mapbox-gl';
-import { type MapboxConfig } from '../api/fetchers/mapbox';
+import { Source, Layer } from 'react-map-gl/mapbox';
+import { BaseMap } from './layers/base-map';
 import { AircraftLayer } from './layers/aircraft';
 import { PrecipitationLayer } from './layers/precipitation';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './index.css';
 
 export function App() {
-  const mapRef = React.useRef<MapRef | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-  const [serverConfig, setServerConfig] = React.useState<MapboxConfig | null>(null);
-
-  React.useEffect(() => {
-    fetch('/api/config')
-      .then(res => res.json())
-      .then((data: MapboxConfig & { error?: string }) => {
-        if (data.error || !data.MAPBOX_PUBLIC_TOKEN) {
-          setError(data.error ?? 'Failed to load config');
-        } else {
-          setServerConfig(data);
-        }
-      })
-      .catch(() => setError('Failed to load config'));
-  }, []);
-
-  if (error) return <div className="error">{error}</div>;
-  if (!serverConfig) return null;
-
   return (
-    <Map
-      id="basemap"
-      ref={mapRef}
-      mapboxAccessToken={serverConfig.MAPBOX_PUBLIC_TOKEN}
-      initialViewState={{
-        longitude: Number(serverConfig.MAP_LONG),
-        latitude: Number(serverConfig.MAP_LAT),
-        zoom: Number(serverConfig.MAP_ZOOM),
-      }}
+    <BaseMap
       style={{ width: '100vw', height: '100vh' }}
-      mapStyle="mapbox://styles/mapbox/standard"
       config={{
-        basemap: {
-          colorTrunks: 'hsl(0, 0%, 100%)',
-          colorEducation: 'hsla(0, 0%, 100%, 0)',
-          show3dObjects: false,
-          colorGreenspace: 'hsla(0, 0%, 100%, 0)',
-          showPlaceLabels: false,
-          theme: 'default',
-          colorCommercial: 'hsla(0, 0%, 100%, 0)',
-          colorMedical: 'hsla(0, 0%, 100%, 0)',
-          colorLand: 'hsl(154, 38%, 75%)',
-          colorRoads: 'hsla(0, 0%, 100%, 0.61)',
-          showPointOfInterestLabels: false,
-          colorWater: 'hsl(196, 76%, 67%)',
-          lightPreset: 'day',
-          showTransitLabels: false,
-          colorMotorways: 'hsl(0, 0%, 100%)',
-          showAdminBoundaries: false,
-          showPedestrianRoads: false,
-          colorBuildings: 'hsl(20, 0%, 91%)',
-          showRoadLabels: false,
-          colorIndustrial: 'hsla(0, 0%, 100%, 0)',
-        } as unknown as Record<string, ConfigSpecification>,
+        colorTrunks: 'hsl(0, 0%, 100%)',
+        colorEducation: 'hsla(0, 0%, 100%, 0)',
+        show3dObjects: false,
+        colorGreenspace: 'hsla(0, 0%, 100%, 0)',
+        showPlaceLabels: false,
+        theme: 'default',
+        colorCommercial: 'hsla(0, 0%, 100%, 0)',
+        colorMedical: 'hsla(0, 0%, 100%, 0)',
+        colorLand: 'hsl(154, 38%, 75%)',
+        colorRoads: 'hsla(0, 0%, 100%, 0.61)',
+        showPointOfInterestLabels: false,
+        colorWater: 'hsl(196, 76%, 67%)',
+        lightPreset: 'day',
+        showTransitLabels: false,
+        colorMotorways: 'hsl(0, 0%, 100%)',
+        showAdminBoundaries: false,
+        showPedestrianRoads: false,
+        colorBuildings: 'hsl(20, 0%, 91%)',
+        showRoadLabels: false,
+        colorIndustrial: 'hsla(0, 0%, 100%, 0)',
       }}
     >
       <Source id="satellite" type="raster" url="mapbox://mapbox.satellite">
@@ -74,8 +42,6 @@ export function App() {
             'raster-opacity': 0.25,
             'raster-saturation': -1,
             'raster-contrast': 0.4,
-            // 'raster-color': 'yellow',
-            // 'raster-color-mix': [0.2126, 0.7152, 0.0722, 0],
           }}
         />
       </Source>
@@ -120,9 +86,22 @@ export function App() {
           }}
         />
       </Source>
-      <AircraftLayer mapRef={mapRef} />
-      <PrecipitationLayer />
-    </Map>
+      <AircraftLayer
+        layout={{
+          'text-field': '^',
+          'text-size': ['interpolate', ['linear'], ['zoom'], 5, 12, 10, 16],
+          'text-allow-overlap': true,
+          'text-ignore-placement': true,
+          'text-rotate': ['coalesce', ['get', 'track'], 0],
+        }}
+        paint={{
+          'text-color': '#ffd56b',
+          'text-halo-color': '#1a1f2b',
+          'text-halo-width': 1.2,
+        }}
+      />
+      <PrecipitationLayer paint={{ 'raster-opacity': 0.6 }} />
+    </BaseMap>
   );
 }
 

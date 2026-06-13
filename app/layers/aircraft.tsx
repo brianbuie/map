@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { GeoJSONSource } from 'mapbox-gl';
-import { Layer, type MapRef, Source } from 'react-map-gl/mapbox';
+import { Layer, type SymbolLayerSpecification, Source } from 'react-map-gl/mapbox';
+import { useMapConfig } from './base-map';
 
 type AircraftCollection = GeoJSON.FeatureCollection<
   GeoJSON.Point,
@@ -29,18 +30,19 @@ function toAircraftCollection(input: unknown): AircraftCollection | null {
   return maybeFeatureCollection as AircraftCollection;
 }
 
-export const AircraftLayer = ({ mapRef }: { mapRef: React.RefObject<MapRef | null> }) => {
+export const AircraftLayer = ({ ...props }: Partial<SymbolLayerSpecification>) => {
+  const { ref } = useMapConfig();
   const [aircraft, setAircraft] = React.useState<AircraftCollection>({
     type: 'FeatureCollection',
     features: [],
   });
 
   React.useEffect(() => {
-    const map = mapRef.current;
+    const map = ref.current;
     if (!map) return;
     const source = map.getSource('aircraft') as GeoJSONSource | undefined;
     source?.setData(aircraft);
-  }, [mapRef, aircraft]);
+  }, [ref, aircraft]);
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -75,24 +77,7 @@ export const AircraftLayer = ({ mapRef }: { mapRef: React.RefObject<MapRef | nul
 
   return (
     <Source id="aircraft" type="geojson" data={aircraft}>
-      <Layer
-        id="aircraft-arrow"
-        type="symbol"
-        source="aircraft"
-        minzoom={5}
-        layout={{
-          'text-field': '^',
-          'text-size': ['interpolate', ['linear'], ['zoom'], 5, 12, 10, 16],
-          'text-allow-overlap': true,
-          'text-ignore-placement': true,
-          'text-rotate': ['coalesce', ['get', 'track'], 0],
-        }}
-        paint={{
-          'text-color': '#ffd56b',
-          'text-halo-color': '#1a1f2b',
-          'text-halo-width': 1.2,
-        }}
-      />
+      <Layer id="aircraft-arrow" type="symbol" source="aircraft" minzoom={5} {...props} />
     </Source>
   );
 };
