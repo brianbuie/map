@@ -1,157 +1,127 @@
-import { useEffect, useRef, useState } from 'react';
-import type { GeoJSONSource } from 'mapbox-gl';
-import Map, { Layer, type LayerProps, type MapRef, Source } from 'react-map-gl/mapbox';
+import * as React from 'react';
+import Map, { type MapRef, Source, Layer } from 'react-map-gl/mapbox';
+import { type ConfigSpecification } from 'mapbox-gl';
 import { type MapboxConfig } from '../api/fetchers/mapbox';
-// import { type AdsbProperties } from '../api/fetchers/adsb';
+import { AircraftLayer } from './layers/aircraft';
+import { PrecipitationLayer } from './layers/precipitation';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './index.css';
 
-type AircraftCollection = GeoJSON.FeatureCollection<
-  GeoJSON.Point,
-  {
-    hex: string;
-    flight: string;
-    alt_baro: number | 'ground' | null;
-    gs: number | null;
-    track: number | null;
-    squawk: string | null;
-    category: string | null;
-    t: string | null;
-    seen_pos: number | null;
-  }
->;
-
-const aircraftArrowLayer: LayerProps = {
-  id: 'aircraft-arrows',
-  type: 'symbol',
-  source: 'aircraft',
-  minzoom: 5,
-  layout: {
-    'text-field': '^',
-    'text-size': ['interpolate', ['linear'], ['zoom'], 5, 12, 10, 16],
-    'text-allow-overlap': true,
-    'text-ignore-placement': true,
-    'text-rotate': ['coalesce', ['get', 'track'], 0],
-  },
-  paint: {
-    'text-color': '#ffd56b',
-    'text-halo-color': '#1a1f2b',
-    'text-halo-width': 1.2,
-  },
-};
-
-function toAircraftCollection(input: unknown): AircraftCollection | null {
-  if (!input || typeof input !== 'object') return null;
-  const maybeFeatureCollection = input as {
-    type?: unknown;
-    features?: unknown;
-  };
-  if (maybeFeatureCollection.type !== 'FeatureCollection' || !Array.isArray(maybeFeatureCollection.features)) {
-    return null;
-  }
-  return maybeFeatureCollection as AircraftCollection;
-}
-
 export function App() {
-  const mapRef = useRef<MapRef | null>(null);
-  const [config, setConfig] = useState<MapboxConfig | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [aircraft, setAircraft] = useState<AircraftCollection>({
-    type: 'FeatureCollection',
-    features: [],
-  });
-  // Rounds to a 5-minute window; changing this value forces Mapbox to refetch radar tiles.
-  const [radarEpoch, setRadarEpoch] = useState(() => Math.floor(Date.now() / (5 * 60 * 1000)));
+  const mapRef = React.useRef<MapRef | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [serverConfig, setServerConfig] = React.useState<MapboxConfig | null>(null);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setRadarEpoch(Math.floor(Date.now() / (5 * 60 * 1000)));
-    }, 60 * 1000); // check every minute, update only when the 5-min window turns
-    return () => clearInterval(id);
-  }, []);
-
-  const syncAircraft = () => {
-    const map = mapRef.current;
-    if (!map) return;
-    const source = map.getSource('aircraft') as GeoJSONSource | undefined;
-    source?.setData(aircraft);
-  };
-  useEffect(() => {
-    syncAircraft();
-  }, [mapRef, aircraft]);
-
-  useEffect(() => {
+  React.useEffect(() => {
     fetch('/api/config')
       .then(res => res.json())
       .then((data: MapboxConfig & { error?: string }) => {
         if (data.error || !data.MAPBOX_PUBLIC_TOKEN) {
           setError(data.error ?? 'Failed to load config');
         } else {
-          setConfig(data);
+          setServerConfig(data);
         }
       })
       .catch(() => setError('Failed to load config'));
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    fetch('/api/layers/adsb/latest', { signal: controller.signal })
-      .then(res => {
-        if (!res.ok) throw new Error('Aircraft layer unavailable');
-        return res.json();
-      })
-      .then(data => {
-        const parsed = toAircraftCollection(data);
-        if (parsed) setAircraft(parsed);
-      })
-      .catch(() => {});
-
-    const stream = new EventSource('/api/layers/adsb/stream');
-    stream.onmessage = event => {
-      try {
-        const data = JSON.parse(event.data) as unknown;
-        const parsed = toAircraftCollection(data);
-        if (parsed) setAircraft(parsed);
-      } catch {
-        // Ignore malformed events and keep stream alive.
-      }
-    };
-
-    return () => {
-      controller.abort();
-      stream.close();
-    };
-  }, []);
-
   if (error) return <div className="error">{error}</div>;
-  if (!config) return null;
+  if (!serverConfig) return null;
 
   return (
     <Map
+      id="basemap"
       ref={mapRef}
-      mapboxAccessToken={config.MAPBOX_PUBLIC_TOKEN}
+      mapboxAccessToken={serverConfig.MAPBOX_PUBLIC_TOKEN}
       initialViewState={{
-        longitude: Number(config.MAP_LONG),
-        latitude: Number(config.MAP_LAT),
-        zoom: Number(config.MAP_ZOOM),
+        longitude: Number(serverConfig.MAP_LONG),
+        latitude: Number(serverConfig.MAP_LAT),
+        zoom: Number(serverConfig.MAP_ZOOM),
       }}
       style={{ width: '100vw', height: '100vh' }}
-      mapStyle={config.MAP_STYLE}
-      onLoad={syncAircraft}
+      mapStyle="mapbox://styles/mapbox/standard"
+      config={{
+        basemap: {
+          colorTrunks: 'hsl(0, 0%, 100%)',
+          colorEducation: 'hsla(0, 0%, 100%, 0)',
+          show3dObjects: false,
+          colorGreenspace: 'hsla(0, 0%, 100%, 0)',
+          showPlaceLabels: false,
+          theme: 'default',
+          colorCommercial: 'hsla(0, 0%, 100%, 0)',
+          colorMedical: 'hsla(0, 0%, 100%, 0)',
+          colorLand: 'hsl(154, 38%, 75%)',
+          colorRoads: 'hsla(0, 0%, 100%, 0.61)',
+          showPointOfInterestLabels: false,
+          colorWater: 'hsl(196, 76%, 67%)',
+          lightPreset: 'day',
+          showTransitLabels: false,
+          colorMotorways: 'hsl(0, 0%, 100%)',
+          showAdminBoundaries: false,
+          showPedestrianRoads: false,
+          colorBuildings: 'hsl(20, 0%, 91%)',
+          showRoadLabels: false,
+          colorIndustrial: 'hsla(0, 0%, 100%, 0)',
+        } as unknown as Record<string, ConfigSpecification>,
+      }}
     >
-      <Source
-        id="radar"
-        type="raster"
-        tiles={[`/api/layers/radar/wms?bbox={bbox-epsg-3857}&width=256&height=256&t=${radarEpoch}`]}
-        tileSize={256}
-        attribution="NOAA/NWS"
-      >
-        <Layer id="radar-layer" type="raster" paint={{ 'raster-opacity': 0.6 }} />
+      <Source id="satellite" type="raster" url="mapbox://mapbox.satellite">
+        <Layer
+          id="satellite-imagery"
+          type="raster"
+          source="satellite"
+          paint={{
+            'raster-opacity': 0.25,
+            'raster-saturation': -1,
+            'raster-contrast': 0.4,
+            // 'raster-color': 'yellow',
+            // 'raster-color-mix': [0.2126, 0.7152, 0.0722, 0],
+          }}
+        />
       </Source>
-      <Source id="aircraft" type="geojson" data={aircraft}>
-        <Layer {...aircraftArrowLayer} />
+      <Source id="terrain" type="raster-dem" url="mapbox://mapbox.mapbox-terrain-dem-v1">
+        <Layer
+          id="hillshade"
+          type="hillshade"
+          source="terrain"
+          paint={{
+            'hillshade-exaggeration': 1,
+            'hillshade-illumination-direction': 231,
+            'hillshade-illumination-anchor': 'map',
+            'hillshade-shadow-color': 'hsla(116, 0%, 0%, 0.5)',
+            'hillshade-accent-color': 'hsla(116, 16%, 62%, 0)',
+            'hillshade-highlight-color': 'hsla(107, 0%, 100%, 0.54)',
+          }}
+        />
       </Source>
+      <Source id="traffic" type="vector" url="mapbox://mapbox.mapbox-traffic-v1">
+        <Layer
+          id="traffic-lines"
+          type="line"
+          source="traffic"
+          source-layer="traffic"
+          layout={{
+            'line-join': 'round',
+            'line-cap': 'round',
+          }}
+          paint={{
+            'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 0, 0.5, 14, 5],
+            'line-color': [
+              'match',
+              ['get', 'congestion'],
+              ['moderate'],
+              'hsla(35, 90%, 58%, 0.53)',
+              ['heavy'],
+              'hsla(0, 91%, 55%, 0.7)',
+              ['severe'],
+              'hsl(0, 91%, 29%)',
+              'hsla(302, 0%, 0%, 0)',
+            ],
+          }}
+        />
+      </Source>
+      <AircraftLayer mapRef={mapRef} />
+      <PrecipitationLayer />
     </Map>
   );
 }
