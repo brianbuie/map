@@ -9,12 +9,14 @@
     "start": "NODE_ENV=production bun api/index.ts"
   },
   "dependencies": {
+    "@brianbuie/node-kit": "^0.15.1",
     "croner": "^10.0.1",
     "hono": "^4.12.23",
     "mapbox-gl": "^3.24.0",
     "react": "^19",
     "react-dom": "^19",
     "react-map-gl": "^8.1.1",
+    "sharp": "^0.35.1",
     "tailwindcss": "^4.1.11"
   },
   "devDependencies": {

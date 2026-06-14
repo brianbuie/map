@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Source, Layer } from 'react-map-gl/mapbox';
-import { BaseMap } from './layers/base-map';
-import { AircraftLayer } from './layers/aircraft';
-import { PrecipitationLayer } from './layers/precipitation';
+import { BaseMap } from '#ui/base-map';
+import { AircraftLayer } from '#ui/aircraft-layer';
+import { PrecipitationLayer } from '#ui/precipitation-layer';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './index.css';
 
@@ -33,15 +33,13 @@ export function App() {
         colorIndustrial: 'hsla(0, 0%, 100%, 0)',
       }}
     >
-      <Source id="satellite" type="raster" url="mapbox://mapbox.satellite">
+      <Source id="satellite" type="raster" tiles={['/api/layers/satellite/{z}/{x}/{y}']} tileSize={256} scheme="xyz">
         <Layer
-          id="satellite-imagery"
+          id="satellite-layer"
           type="raster"
           source="satellite"
           paint={{
-            'raster-opacity': 0.25,
-            'raster-saturation': -1,
-            'raster-contrast': 0.4,
+            'raster-opacity': 0.6,
           }}
         />
       </Source>

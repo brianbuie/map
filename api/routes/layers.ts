@@ -3,6 +3,7 @@ import { streamSSE } from 'hono/streaming';
 import { getLatest, getRange } from '../db';
 import { fetchAndSaveAdsb } from '../fetchers/adsb';
 import { fetchRadarWmsTile } from '../fetchers/radar';
+import { fetchSatelliteTile } from '../fetchers/satellite';
 
 const layers = new Hono();
 
@@ -18,6 +19,20 @@ layers.get('/radar/wms', async c => {
 
   c.header('Content-Type', result.contentType);
   c.header('Cache-Control', 'public, max-age=300');
+  return c.body(result.data.buffer as ArrayBuffer);
+});
+
+// Satellite: fetch and process Mapbox satellite tiles (removes natural colors).
+// Returns processed PNG with greens/blues made transparent.
+// URL pattern: /api/layers/satellite/:z/:x/:y
+layers.get('/satellite/:z/:x/:y', async c => {
+  const z = Number(c.req.param('z'));
+  const x = Number(c.req.param('x'));
+  const y = Number(c.req.param('y'));
+  const result = await fetchSatelliteTile(z, x, y);
+  if (!result) return c.body(null, 503);
+  c.header('Content-Type', result.contentType);
+  c.header('Cache-Control', 'public, max-age=900'); // 15 minutes
   return c.body(result.data.buffer as ArrayBuffer);
 });
 
