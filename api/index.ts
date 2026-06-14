@@ -26,14 +26,18 @@ app.route('/api/layers', layerRoutes);
 
 // --- Background jobs ---
 
+let wait = 1000;
+let maxWait = 20000;
 const pollAdsb = async () => {
   try {
     await fetchAndSaveAdsb();
     new BroadcastChannel('layer:adsb').postMessage('refresh');
+    wait = 1000;
   } catch (err) {
     console.error('[adsb poll]', err);
+    wait *= 2;
   } finally {
-    setTimeout(() => void pollAdsb(), 1000);
+    setTimeout(() => void pollAdsb(), Math.min(wait, maxWait));
   }
 };
 

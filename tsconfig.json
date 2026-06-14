@@ -17,7 +17,8 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "paths": {
-      "#ui*": ["./app/ui/*"]
+      "#ui/*": ["./app/ui/*"],
+      "#types/*": ["./types/*"]
     }
   },
   "exclude": ["dist", "node_modules"]

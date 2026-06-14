@@ -2,23 +2,9 @@ import * as React from 'react';
 import type { GeoJSONSource } from 'mapbox-gl';
 import { Layer, type SymbolLayerSpecification, Source } from 'react-map-gl/mapbox';
 import { useMapConfig } from './base-map';
+import type { AircraftFeatureCollection } from '#types/Aircraft';
 
-type AircraftCollection = GeoJSON.FeatureCollection<
-  GeoJSON.Point,
-  {
-    hex: string;
-    flight: string;
-    alt_baro: number | 'ground' | null;
-    gs: number | null;
-    track: number | null;
-    squawk: string | null;
-    category: string | null;
-    t: string | null;
-    seen_pos: number | null;
-  }
->;
-
-function toAircraftCollection(input: unknown): AircraftCollection | null {
+function toAircraftCollection(input: unknown): AircraftFeatureCollection | null {
   if (!input || typeof input !== 'object') return null;
   const maybeFeatureCollection = input as {
     type?: unknown;
@@ -27,12 +13,12 @@ function toAircraftCollection(input: unknown): AircraftCollection | null {
   if (maybeFeatureCollection.type !== 'FeatureCollection' || !Array.isArray(maybeFeatureCollection.features)) {
     return null;
   }
-  return maybeFeatureCollection as AircraftCollection;
+  return maybeFeatureCollection as AircraftFeatureCollection;
 }
 
 export const AircraftLayer = ({ ...props }: Partial<SymbolLayerSpecification>) => {
   const { ref } = useMapConfig();
-  const [aircraft, setAircraft] = React.useState<AircraftCollection>({
+  const [aircraft, setAircraft] = React.useState<AircraftFeatureCollection>({
     type: 'FeatureCollection',
     features: [],
   });

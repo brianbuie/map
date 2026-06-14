@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Aircraft } from '#types/Aircraft';
 
 /**
  * Source: https://github.com/wiedehopf/tar1090/blob/master/html/markers.js
@@ -1227,43 +1228,27 @@ let categoryIcons: Record<string, IconMatch> = {
   C3: ['ground_tower', 1],
 };
 
-function getBaseMarker(
-  category?: string,
-  typeDesignator?: string,
-  typeDescription?: string,
-  wtc?: string,
-  addrtype?: string,
-  altitude?: number | string,
-): IconMatch {
-  if (addrtype === 'ais') {
-    return ['ground_square', 0.001];
+function getBaseMarker(a: Aircraft): IconMatch {
+  if (a.t && a.t in typeDesignatorIcons) {
+    return typeDesignatorIcons[a.t]!;
   }
-  if (typeDesignator && typeDesignator in typeDesignatorIcons) {
-    return typeDesignatorIcons[typeDesignator]!;
+  // if (typeDescription?.length === 3) {
+  //   if (typeDescription in typeDescriptionIcons) {
+  //     return typeDescriptionIcons[typeDescription]!;
+  //   }
+  //   const basicType = typeDescription.charAt(0);
+  //   if (basicType in typeDescriptionIcons) {
+  //     return typeDescriptionIcons[basicType]!;
+  //   }
+  // }
+  if (a.category && a.category in categoryIcons) {
+    return categoryIcons[a.category]!;
   }
-  if (typeDescription?.length === 3) {
-    if (wtc?.length === 1) {
-      const withWtc = `${typeDescription}-${wtc}`;
-      if (withWtc in typeDescriptionIcons) {
-        return typeDescriptionIcons[withWtc]!;
-      }
-    }
-    if (typeDescription in typeDescriptionIcons) {
-      return typeDescriptionIcons[typeDescription]!;
-    }
-    const basicType = typeDescription.charAt(0);
-    if (basicType in typeDescriptionIcons) {
-      return typeDescriptionIcons[basicType]!;
-    }
-  }
-  if (category && category in categoryIcons) {
-    return categoryIcons[category]!;
-  }
-  if (
-    altitude === 'ground' &&
-    (addrtype === 'adsb_icao_nt' || addrtype === 'tisb_other' || addrtype === 'tisb_trackfile')
-  ) {
-    return ['ground_square', 1];
-  }
+  // if (
+  //   a.alt_baro === 'ground' &&
+  //   (a.type === 'adsb_icao_nt' || a.type === 'tisb_other' || a.type === 'tisb_trackfile')
+  // ) {
+  //   return ['ground_square', 1];
+  // }
   return ['unknown', 1];
 }
