@@ -1176,40 +1176,6 @@ let typeDesignatorIcons: Record<string, IconMatch> = {
   'TWR': ['ground_tower', 1],
 };
 
-// Maps ICAO aircraft type description codes (e.g. "L2J") to aircraft icons. This is used if the ICAO type designator (e.g. "B731")
-// cannot be found in the TypeDesignatorIcons mappings. The key can be one of the following:
-//   - Single character: The basic aircraft type letter code (e.g. "H" for helicopter).
-//   - Three characters: The ICAO type description code (e.g. "L2J" for landplanes with 2 jet engines).
-//   - Five characters: The ICAO type description code concatenated with the wake turbulence category code, separated by
-//     a dash (e.g. "L2J-M").
-
-let typeDescriptionIcons: Record<string, IconMatch> = {
-  'H': ['helicopter', 1],
-  'G': ['gyrocopter', 1],
-  'L1P': ['cessna', 1],
-  'A1P': ['cessna', 1],
-  'L1T': ['single_turbo', 1],
-  'L1J': ['hi_perf', 0.92],
-  'L2P': ['twin_small', 1],
-  'A2P': ['twin_large', 0.96],
-  'A2P-M': ['twin_large', 1.12],
-  'L2T': ['twin_large', 0.96],
-  'L2T-M': ['twin_large', 1.12],
-  'A2T': ['twin_large', 0.96],
-  'A2T-M': ['twin_large', 1.06],
-  'L1J-L': ['jet_nonswept', 1], // < 7t
-  'L2J-L': ['jet_nonswept', 1], // < 7t
-  'L2J-M': ['airliner', 1], // < 136t
-  'L2J-H': ['heavy_2e', 0.96], // > 136t
-  'L3J-H': ['md11', 1], // > 136t
-  'L4T-M': ['c130', 1],
-  'L4T-H': ['c130', 1.07],
-  'L4T': ['c130', 0.96],
-  'L4J-H': ['b707', 1],
-  'L4J-M': ['b707', 0.8],
-  'L4J': ['b707', 0.8],
-};
-
 let categoryIcons: Record<string, IconMatch> = {
   A1: ['cessna', 1], // < 7t
   A2: ['jet_swept', 0.94], // < 34t
@@ -1232,23 +1198,36 @@ function getBaseMarker(a: Aircraft): IconMatch {
   if (a.t && a.t in typeDesignatorIcons) {
     return typeDesignatorIcons[a.t]!;
   }
-  // if (typeDescription?.length === 3) {
-  //   if (typeDescription in typeDescriptionIcons) {
-  //     return typeDescriptionIcons[typeDescription]!;
-  //   }
-  //   const basicType = typeDescription.charAt(0);
-  //   if (basicType in typeDescriptionIcons) {
-  //     return typeDescriptionIcons[basicType]!;
-  //   }
-  // }
   if (a.category && a.category in categoryIcons) {
     return categoryIcons[a.category]!;
   }
-  // if (
-  //   a.alt_baro === 'ground' &&
-  //   (a.type === 'adsb_icao_nt' || a.type === 'tisb_other' || a.type === 'tisb_trackfile')
-  // ) {
-  //   return ['ground_square', 1];
-  // }
   return ['unknown', 1];
+}
+
+export function makeSvgString(a: Aircraft) {
+  const [iconName, scale] = getBaseMarker(a);
+  const shape = shapes[iconName as keyof typeof shapes]!;
+  const width = (shape.w || 32) * scale;
+  const height = (shape.h || 32) * scale;
+  const viewBox = shape.viewBox || `0 0 ${shape.w || 32} ${shape.h || 32}`;
+  const paths = Array.isArray(shape.path) ? shape.path : [shape.path];
+  const strokeWidth = ((shape.strokeScale || 1) * 0.5).toString();
+
+  let emphasize = false;
+  if (a.dbFlags === 1) {
+    emphasize = true;
+  }
+  const who = a.ownOp?.toLowerCase() ?? '';
+  if (['police', 'security', 'military', 'patrol'].some(w => who.includes(w))) {
+    emphasize = true;
+  }
+  const color = emphasize ? '#a50c0c' : '#000';
+
+  let svg = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}" style="overflow: visible">`;
+  paths.forEach(d => {
+    svg += `<path d="${d}" fill="${color}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" />\n`;
+  });
+  svg += '</svg>';
+
+  return { svg, width, height };
 }

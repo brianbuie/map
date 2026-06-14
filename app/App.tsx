@@ -76,9 +76,9 @@ export function App() {
               ['moderate'],
               'hsla(35, 90%, 58%, 0.53)',
               ['heavy'],
-              'hsla(0, 91%, 55%, 0.7)',
+              'hsla(19, 82%, 51%, 0.7)',
               ['severe'],
-              'hsl(0, 91%, 29%)',
+              'hsla(0, 77%, 44%, 0.863)',
               'hsla(302, 0%, 0%, 0)',
             ],
           }}
@@ -86,16 +86,15 @@ export function App() {
       </Source>
       <AircraftLayer
         layout={{
-          'text-field': '^',
-          'text-size': ['interpolate', ['linear'], ['zoom'], 5, 12, 10, 16],
-          'text-allow-overlap': true,
-          'text-ignore-placement': true,
-          'text-rotate': ['coalesce', ['get', 'track'], 0],
+          'icon-image': ['get', 'hex'],
+          'icon-size': 0.8,
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          'icon-rotation-alignment': 'map',
+          'icon-rotate': ['get', 'track'],
         }}
         paint={{
-          'text-color': '#ffd56b',
-          'text-halo-color': '#1a1f2b',
-          'text-halo-width': 1.2,
+          'icon-opacity': 0.6,
         }}
       />
       <PrecipitationLayer paint={{ 'raster-opacity': 0.6 }} />

@@ -1,8 +1,10 @@
 import * as React from 'react';
 import type { GeoJSONSource } from 'mapbox-gl';
-import { Layer, type SymbolLayerSpecification, Source } from 'react-map-gl/mapbox';
+import { Layer, Source } from 'react-map-gl/mapbox';
+import type { SymbolLayerSpecification } from 'mapbox-gl';
 import { useMapConfig } from './base-map';
-import type { AircraftFeatureCollection } from '#types/Aircraft';
+import type { AircraftFeatureCollection, Aircraft } from '#types/Aircraft';
+import { makeSvgString } from './aircraft-icon';
 
 function toAircraftCollection(input: unknown): AircraftFeatureCollection | null {
   if (!input || typeof input !== 'object') return null;
@@ -16,18 +18,50 @@ function toAircraftCollection(input: unknown): AircraftFeatureCollection | null 
   return maybeFeatureCollection as AircraftFeatureCollection;
 }
 
-export const AircraftLayer = ({ ...props }: Partial<SymbolLayerSpecification>) => {
+async function renderSvg({ svg, width, height }: { svg: string; width: number; height: number }) {
+  return new Promise<ImageData>(resolve => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d')!;
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0);
+      resolve(ctx.getImageData(0, 0, width, height));
+    };
+    img.onerror = e => {
+      console.error(`[renderSvg] Error`, e);
+    };
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  });
+}
+
+export const AircraftLayer = (props: Partial<SymbolLayerSpecification> = {}) => {
   const { ref } = useMapConfig();
   const [aircraft, setAircraft] = React.useState<AircraftFeatureCollection>({
     type: 'FeatureCollection',
     features: [],
   });
+  const iconsAddedRef = React.useRef<Set<string>>(new Set());
 
   React.useEffect(() => {
     const map = ref.current;
     if (!map) return;
-    const source = map.getSource('aircraft') as GeoJSONSource | undefined;
-    source?.setData(aircraft);
+
+    // Add aircraft icon images to the map
+    aircraft.features.forEach(feature => {
+      const a = feature.properties;
+      const { hex } = a;
+      if (!hex) return;
+
+      if (!iconsAddedRef.current.has(hex) && !map.hasImage(hex)) {
+        const data = makeSvgString(a);
+        renderSvg(data).then(img => {
+          map.addImage(hex, img);
+          iconsAddedRef.current.add(hex);
+        });
+      }
+    });
   }, [ref, aircraft]);
 
   React.useEffect(() => {
@@ -50,9 +84,7 @@ export const AircraftLayer = ({ ...props }: Partial<SymbolLayerSpecification>) =
         const data = JSON.parse(event.data) as unknown;
         const parsed = toAircraftCollection(data);
         if (parsed) setAircraft(parsed);
-      } catch {
-        // Ignore malformed events and keep stream alive.
-      }
+      } catch {}
     };
 
     return () => {
@@ -61,9 +93,16 @@ export const AircraftLayer = ({ ...props }: Partial<SymbolLayerSpecification>) =
     };
   }, []);
 
+  const layerProps = {
+    type: 'symbol',
+    source: 'aircraft',
+    minzoom: 5,
+    ...props,
+  } as any;
+
   return (
     <Source id="aircraft" type="geojson" data={aircraft}>
-      <Layer id="aircraft-arrow" type="symbol" source="aircraft" minzoom={5} {...props} />
+      <Layer id="aircraft-arrow" {...layerProps} />
     </Source>
   );
 };
