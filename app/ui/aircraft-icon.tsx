@@ -1221,7 +1221,7 @@ export function makeSvgString(a: Aircraft) {
   if (['police', 'security', 'military', 'patrol'].some(w => who.includes(w))) {
     emphasize = true;
   }
-  const color = emphasize ? '#a50c0c' : '#000';
+  const color = emphasize ? '#b00909' : '#00000069';
 
   let svg = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}" style="overflow: visible">`;
   paths.forEach(d => {

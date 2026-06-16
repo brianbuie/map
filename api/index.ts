@@ -34,7 +34,8 @@ const pollAdsb = async () => {
     new BroadcastChannel('layer:adsb').postMessage('refresh');
     wait = 1000;
   } catch (err) {
-    console.error('[adsb poll]', err);
+    const msg = err instanceof Error ? err.message : 'Unknown Error';
+    console.error(`[adsb poll] ${msg}`);
     wait *= 2;
   } finally {
     setTimeout(() => void pollAdsb(), Math.min(wait, maxWait));

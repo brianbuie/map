@@ -6,12 +6,19 @@ import { PrecipitationLayer } from '#ui/precipitation-layer';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './index.css';
 
+let hotKey = Date.now();
+if (import.meta.hot) {
+  import.meta.hot.accept(() => {
+    hotKey = Date.now();
+  });
+}
+
 export function App() {
   return (
     <BaseMap
+      key={hotKey}
       style={{ width: '100vw', height: '100vh' }}
       config={{
-        colorTrunks: 'hsl(0, 0%, 100%)',
         colorEducation: 'hsla(0, 0%, 100%, 0)',
         show3dObjects: false,
         colorGreenspace: 'hsla(0, 0%, 100%, 0)',
@@ -19,13 +26,14 @@ export function App() {
         theme: 'default',
         colorCommercial: 'hsla(0, 0%, 100%, 0)',
         colorMedical: 'hsla(0, 0%, 100%, 0)',
-        colorLand: 'hsl(154, 38%, 75%)',
-        colorRoads: 'hsla(0, 0%, 100%, 0.61)',
+        colorLand: 'hsl(152, 29%, 65%)',
         showPointOfInterestLabels: false,
         colorWater: 'hsl(196, 76%, 67%)',
         lightPreset: 'day',
-        showTransitLabels: false,
+        colorRoads: 'hsla(0, 0%, 100%, 0.493)',
+        colorTrunks: 'hsl(0, 0%, 100%)',
         colorMotorways: 'hsl(0, 0%, 100%)',
+        showTransitLabels: false,
         showAdminBoundaries: false,
         showPedestrianRoads: false,
         colorBuildings: 'hsl(20, 0%, 91%)',
@@ -54,7 +62,7 @@ export function App() {
             'hillshade-illumination-anchor': 'map',
             'hillshade-shadow-color': 'hsla(116, 0%, 0%, 0.5)',
             'hillshade-accent-color': 'hsla(116, 16%, 62%, 0)',
-            'hillshade-highlight-color': 'hsla(107, 0%, 100%, 0.54)',
+            'hillshade-highlight-color': 'hsla(0, 0%, 100%, 0.393)',
           }}
         />
       </Source>
@@ -74,11 +82,11 @@ export function App() {
               'match',
               ['get', 'congestion'],
               ['moderate'],
-              'hsla(35, 90%, 58%, 0.53)',
+              'hsla(35, 85%, 47%, 0.43)',
               ['heavy'],
-              'hsla(19, 82%, 51%, 0.7)',
+              'hsla(19, 82%, 51%, 0.469)',
               ['severe'],
-              'hsla(0, 77%, 44%, 0.863)',
+              'hsla(0, 77%, 44%, 0.437)',
               'hsla(302, 0%, 0%, 0)',
             ],
           }}
@@ -94,7 +102,7 @@ export function App() {
           'icon-rotate': ['get', 'track'],
         }}
         paint={{
-          'icon-opacity': 0.6,
+          'icon-opacity': 1,
         }}
       />
       <PrecipitationLayer paint={{ 'raster-opacity': 0.6 }} />

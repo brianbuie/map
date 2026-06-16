@@ -18,49 +18,36 @@ function toAircraftCollection(input: unknown): AircraftFeatureCollection | null 
   return maybeFeatureCollection as AircraftFeatureCollection;
 }
 
-async function renderSvg({ svg, width, height }: { svg: string; width: number; height: number }) {
-  return new Promise<ImageData>(resolve => {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d')!;
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0);
-      resolve(ctx.getImageData(0, 0, width, height));
-    };
-    img.onerror = e => {
-      console.error(`[renderSvg] Error`, e);
-    };
-    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-  });
-}
-
 export const AircraftLayer = (props: Partial<SymbolLayerSpecification> = {}) => {
   const { ref } = useMapConfig();
   const [aircraft, setAircraft] = React.useState<AircraftFeatureCollection>({
     type: 'FeatureCollection',
     features: [],
   });
-  const iconsAddedRef = React.useRef<Set<string>>(new Set());
 
   React.useEffect(() => {
     const map = ref.current;
     if (!map) return;
 
     // Add aircraft icon images to the map
-    aircraft.features.forEach(feature => {
+    aircraft.features.forEach(async feature => {
       const a = feature.properties;
       const { hex } = a;
       if (!hex) return;
-
-      if (!iconsAddedRef.current.has(hex) && !map.hasImage(hex)) {
-        const data = makeSvgString(a);
-        renderSvg(data).then(img => {
-          map.addImage(hex, img);
-          iconsAddedRef.current.add(hex);
-        });
-      }
+      const { svg, width, height } = makeSvgString(a);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+        map.addImage(hex, ctx.getImageData(0, 0, width, height));
+      };
+      img.onerror = e => {
+        console.error(`[renderSvg] Error`, e);
+      };
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     });
   }, [ref, aircraft]);
 

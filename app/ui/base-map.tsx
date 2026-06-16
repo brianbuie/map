@@ -1,15 +1,16 @@
 import * as React from 'react';
 import Map, { type MapRef } from 'react-map-gl/mapbox';
 
-type MapboxConfig = {
-  MAP_LONG: string;
-  MAP_LAT: string;
-  MAP_ZOOM: string;
-  MAPBOX_PUBLIC_TOKEN: string;
-  ref: React.RefObject<MapRef | null>;
+type ViewState = {
+  longitude: number;
+  latitude: number;
+  zoom: number;
 };
 
-const MapConfigContext = React.createContext<MapboxConfig | null>(null);
+const MapConfigContext = React.createContext<{
+  token: string;
+  ref: React.RefObject<MapRef | null>;
+} | null>(null);
 
 export function useMapConfig() {
   const context = React.useContext(MapConfigContext);
@@ -25,45 +26,49 @@ export function BaseMap({
   style?: React.CSSProperties;
   config: Record<string, unknown>;
 }) {
-  const [error, setError] = React.useState<string | null>(null);
-  const [mapConfig, setMapConfig] = React.useState<MapboxConfig | null>(null);
   const ref = React.useRef<MapRef | null>(null);
+  const [token, setToken] = React.useState<string | null>(null);
+  const [viewState, setViewState] = React.useState<ViewState | null>(null);
 
   React.useEffect(() => {
-    fetch('/api/config')
-      .then(res => res.json())
-      .then((data: MapboxConfig & { error?: string }) => {
-        if (data.error || !data.MAPBOX_PUBLIC_TOKEN) {
-          setError(data.error ?? 'Failed to load config');
-        } else {
-          setMapConfig(data);
-        }
-      })
-      .catch(() => setError('Failed to load config'));
+    if (!viewState || !token) {
+      fetch('/api/config')
+        .then(res => res.json())
+        .then(
+          (data: {
+            MAP_LONG: string;
+            MAP_LAT: string;
+            MAP_ZOOM: string;
+            MAPBOX_PUBLIC_TOKEN: string;
+            ref: React.RefObject<MapRef | null>;
+            error?: string;
+          }) => {
+            if (data.error || !data.MAPBOX_PUBLIC_TOKEN) return console.error(data.error ?? 'Failed to load config');
+            setViewState({
+              longitude: Number(data.MAP_LONG),
+              latitude: Number(data.MAP_LAT),
+              zoom: Number(data.MAP_ZOOM),
+            });
+            setToken(data.MAPBOX_PUBLIC_TOKEN);
+          },
+        );
+    }
   }, []);
 
-  if (error) return <div className="error">{error}</div>;
-  if (!mapConfig) return null;
-
-  const value = { ...mapConfig, ref };
-
-  return (
+  return viewState && token ? (
     <Map
       id="basemap"
       ref={ref}
-      mapboxAccessToken={mapConfig.MAPBOX_PUBLIC_TOKEN}
-      initialViewState={{
-        longitude: Number(mapConfig.MAP_LONG),
-        latitude: Number(mapConfig.MAP_LAT),
-        zoom: Number(mapConfig.MAP_ZOOM),
-      }}
+      mapboxAccessToken={token}
+      {...viewState}
+      onMove={e => setViewState(e.viewState)}
       mapStyle="mapbox://styles/mapbox/standard"
       style={style}
       config={{
         basemap: config,
       }}
     >
-      <MapConfigContext.Provider value={value}>{children}</MapConfigContext.Provider>
+      <MapConfigContext.Provider value={{ token, ref }}>{children}</MapConfigContext.Provider>
     </Map>
-  );
+  ) : null;
 }
