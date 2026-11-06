@@ -1,0 +1,23 @@
+services:
+  map:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: map:latest
+    pull_policy: build
+    container_name: map
+    restart: unless-stopped
+    environment:
+      MAP_LONG: ${MAP_LONG}
+      MAP_LAT: ${MAP_LAT}
+      MAP_ZOOM: ${MAP_ZOOM}
+      MAP_STYLE: ${MAP_STYLE}
+      HISTORY_DAYS: ${HISTORY_DAYS}
+      MAPBOX_TOKEN: ${MAPBOX_TOKEN}
+      MAPBOX_PUBLIC_TOKEN: ${MAPBOX_PUBLIC_TOKEN}
+      ADSB_URL: ${ADSB_URL}
+    volumes:
+      - /mnt/tank/main/system/apps/map/data:/workspace/data
+    user: '501:3000'
+    ports:
+      - '4202:3000'
